@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"strings"
 )
 
 const (
@@ -22,10 +21,12 @@ var hasError bool
 
 // Run a given string of code input could be entire script or a single line
 func run(script string) {
-	scan := bufio.NewScanner(strings.NewReader(script))
-	fmt.Println("running:")
-	for scan.Scan() {
-		fmt.Println(scan.Text())
+	lexer := NewLexScanner(script)
+	toks := lexer.ScanTokens()
+	fmt.Println("Token Stream:")
+	// For now, just print each token
+	for index, tok := range toks {
+		fmt.Printf("%v: %v\n", index, tok)
 	}
 }
 
@@ -36,7 +37,7 @@ func error(line int, msg string) {
 
 // Report an error at a given line number
 func report(line int, where, msg string) {
-	fmt.Printf("[line %d] Error %v: %v", line, where, msg)
+	fmt.Printf("[line %d] Error %v: %v\n", line, where, msg)
 	hasError = true
 }
 
