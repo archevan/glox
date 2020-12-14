@@ -1,6 +1,6 @@
 # GLOX
 
-### A very **WIP** Lox interpreter written in Golang
+### A _very_ **WIP** Lox interpreter written in Golang
 
 This project is intended (almost) exclusively as a learning project.
 
