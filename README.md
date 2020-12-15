@@ -9,14 +9,16 @@ This project is intended (almost) exclusively as a learning project.
 #### usage
 
 Run from file:
-'''
+
+```
 .\glx.exe [path-to-script]
-'''
+```
 
 Run the REPL:
-'''
+
+```
 .\glx.exe
-'''
+```
 
 #### misc. notes
 
