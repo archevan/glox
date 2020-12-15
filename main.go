@@ -21,7 +21,7 @@ var hasError bool
 
 // Run a given string of code input could be entire script or a single line
 func run(script string) {
-	lexer := NewLexScanner(script)
+	var lexer Lexer = NewLexScanner(script)
 	toks := lexer.ScanTokens()
 	fmt.Println("Token Stream:")
 	// For now, just print each token

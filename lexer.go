@@ -1,13 +1,16 @@
 package main
 
+import "strconv"
+
 // A Lexer is an interface that can be scanned into a slice of tokens
 type Lexer interface {
-	scanTokens() []*Token
+	ScanTokens() []*Token
 }
 
 // LexScanner provides an implementation of Lexer that reads token from a string
 // LexScanner.Init() MUST be called before a LexScanner object is used
 type LexScanner struct {
+	reserved             map[string]TokenType
 	source               string
 	start, current, line int
 	tokens               []*Token
@@ -27,7 +30,26 @@ func (l *LexScanner) ScanTokens() []*Token {
 // NewLexScanner is a simple factory function that
 // creates LexScanner objects and returns pointers to them
 func NewLexScanner(inputStr string) *LexScanner {
-	return &LexScanner{line: 1, source: inputStr}
+	// initialize the reserved word map
+	m := map[string]TokenType{
+		"and":    And,
+		"class":  Class,
+		"else":   Else,
+		"false":  FalseTok,
+		"for":    ForTok,
+		"fun":    Fun,
+		"if":     IfTok,
+		"nil":    NilTok,
+		"or":     OrTok,
+		"print":  PrintTok,
+		"return": ReturnTok,
+		"super":  Super,
+		"this":   ThisTok,
+		"true":   TrueTok,
+		"var":    VarTok,
+		"while":  WhileTok,
+	}
+	return &LexScanner{line: 1, source: inputStr, reserved: m}
 }
 
 // Has our scanner class reached the end of source string ?
@@ -41,7 +63,8 @@ func (l *LexScanner) advance() byte {
 	return l.source[l.current-1]
 }
 
-// add a new token to the token list
+// add a new token to the token list the substring of
+// source from start:current is yanked and stored as the token's lexeme
 func (l *LexScanner) addToken(tok TokenType, lit interface{}) {
 	text := l.source[l.start:l.current]
 	newtok := &Token{toktype: tok, literal: lit, lexeme: text, line: l.line}
@@ -108,14 +131,88 @@ func (l *LexScanner) scanToken() {
 		} else {
 			l.addToken(Slash, nil)
 		}
+	case '"':
+		l.string()
 	case '\n':
 		l.line++
 	case ' ':
 	case '\r':
 	case '\t':
 	default:
-		error(l.line, "Unexpected character.")
+		if isADigit(c) {
+			l.number()
+		} else if isAlphaNumeric(c) {
+			l.identifier()
+		} else {
+			error(l.line, "Unexpected character.")
+		}
 	}
+}
+
+// identifer() scans an identifer from the input stream
+func (l *LexScanner) identifier() {
+	for isAlphaNumeric(l.peek()) {
+		l.advance()
+	}
+	text := l.source[l.start:l.current]
+	typ, prs := l.reserved[text]
+	// if the selected identifer is NOT a reserved word, then its an identifier
+	if !prs {
+		typ = Identifier
+	}
+	l.addToken(typ, nil)
+}
+
+// isAlpha returns true if the given character is alphabetical OR an underscore... false otherwise
+func isAlpha(c byte) bool {
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_'
+}
+
+// isAlphaNumeric returns true if the given character is alphabetical OR a digit... false otherwise
+func isAlphaNumeric(c byte) bool {
+	return isAlpha(c) || isADigit(c)
+}
+
+// number() scans a number from the input stream
+func (l *LexScanner) number() {
+	for isADigit(l.peek()) {
+		l.advance()
+	}
+	if l.peek() == '.' && isADigit(l.peekNext()) {
+		l.advance()
+		for isADigit(l.peek()) {
+			l.advance()
+		}
+	}
+	f, err := strconv.ParseFloat(l.source[l.start:l.current], 64)
+	if err != nil {
+		error(l.line, "Error reading floating point value")
+	}
+	l.addToken(Number, f)
+}
+
+// isADigit
+func isADigit(c byte) bool {
+	return (c >= '0' && c <= '9')
+}
+
+// string() scans a string form the input stream input a token
+func (l *LexScanner) string() {
+	// move 'current' pointer across the string
+	// while maintaining the line number correctly
+	for l.peek() != '"' && !l.isAtEnd() {
+		if l.peek() == '\n' {
+			l.line++
+		}
+		l.advance()
+	}
+	if l.isAtEnd() {
+		error(l.line, "Unterminated String.")
+	}
+	l.advance()
+	// trim quotes + create token
+	val := l.source[l.start+1 : l.current-1]
+	l.addToken(StringTok, val)
 }
 
 // match is a simple lookahead method that consumes
@@ -140,4 +237,12 @@ func (l *LexScanner) peek() byte {
 		return '\000'
 	}
 	return l.source[l.current]
+}
+
+func (l *LexScanner) peekNext() byte {
+	// there is no next to peek
+	if (l.current + 1) >= len(l.source) {
+		return '\000'
+	}
+	return l.source[l.current+1]
 }

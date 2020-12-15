@@ -44,9 +44,9 @@ const (
 	IfTok
 	NilTok
 	OrTok
-	PrintTo
-	ReturnTo
-	SUPER
+	PrintTok
+	ReturnTok
+	Super
 	ThisTok
 	TrueTok
 	VarTok
@@ -71,5 +71,8 @@ type Token struct {
 
 // simple string representation for a token
 func (t *Token) String() string {
-	return fmt.Sprintf("[TOKEN: %v, %v, %v]", t.toktype, t.lexeme, t.line)
+	if t.toktype == EOF {
+		t.lexeme = "END OF FILE"
+	}
+	return fmt.Sprintf("[TOKEN: %5v, %12s, %5v]", t.toktype, t.lexeme, t.line)
 }
