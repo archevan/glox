@@ -67,6 +67,9 @@ func (l *LexScanner) advance() byte {
 // source from start:current is yanked and stored as the token's lexeme
 func (l *LexScanner) addToken(tok TokenType, lit interface{}) {
 	text := l.source[l.start:l.current]
+	if tok == EOF {
+		text = "END OF FILE"
+	}
 	newtok := &Token{toktype: tok, literal: lit, lexeme: text, line: l.line}
 	l.tokens = append(l.tokens, newtok)
 }
