@@ -71,5 +71,5 @@ type Token struct {
 
 // simple string representation for a token
 func (t *Token) String() string {
-	return fmt.Sprintf("[TOKEN: %5v, %12s, %5v, %5v]", t.toktype, t.lexeme, t.line, t.literal)
+	return fmt.Sprintf("[TOKEN: %5v, %12s, line: %5v, %5v]", t.toktype, t.lexeme, t.line, t.literal)
 }

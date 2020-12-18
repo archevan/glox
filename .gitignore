@@ -1,3 +1,4 @@
 glox.exe
 __debug_*
 build/
+.idea
