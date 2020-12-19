@@ -15,13 +15,13 @@ type Expr interface {
 
 // BinaryExpr is a simple type of AST node
 type BinaryExpr struct {
-	left Expr
-	op Token
+	left  Expr
+	op    Token
 	right Expr
 }
 
 // accept method stub for BinaryExpr
-func (c * BinaryExpr) accept(v Visitor) {
+func (c *BinaryExpr) accept(v Visitor) {
 	v.VisitBinaryExpr(c)
 }
 
@@ -31,7 +31,7 @@ type Grouping struct {
 }
 
 // accept method stub for Grouping
-func (c * Grouping) accept(v Visitor) {
+func (c *Grouping) accept(v Visitor) {
 	v.VisitGrouping(c)
 }
 
@@ -41,17 +41,17 @@ type Literal struct {
 }
 
 // accept method stub for Literal
-func (c * Literal) accept(v Visitor) {
+func (c *Literal) accept(v Visitor) {
 	v.VisitLiteral(c)
 }
 
 // Unary is a simple type of AST node
 type Unary struct {
-	op Token
+	op    Token
 	right Expr
 }
 
 // accept method stub for Unary
-func (c * Unary) accept(v Visitor) {
+func (c *Unary) accept(v Visitor) {
 	v.VisitUnary(c)
 }

@@ -12,7 +12,7 @@ type ASTPrinter struct {
 }
 
 // print passes the ASTPrinter visitor to an Expr
-func (a *ASTPrinter) print(exp Expr) string {
+func (a *ASTPrinter) Print(exp Expr) string {
 	exp.accept(a)
 	return a.String()
 }
@@ -62,20 +62,4 @@ func (a *ASTPrinter) parenthesize(name string, exps ...Expr) {
 // Get the string representation for the Expr to be printed
 func (a *ASTPrinter) String() string {
 	return a.str
-}
-
-// simple test harness for the AST pprinter
-func main() {
-	e := &BinaryExpr{
-		left:  &Unary{
-			op:    Token{toktype: Minus, lexeme: "-", line: 1},
-			right: &Literal{val: 123.0},
-		},
-		op:    Token{toktype: Star, lexeme: "*", line: 1},
-		right: &Grouping{
-			exp: &Literal{val: 45.67},
-		},
-	}
-	a := ASTPrinter{}
-	fmt.Println(a.print(e))
 }

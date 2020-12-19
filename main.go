@@ -21,11 +21,12 @@ var hasError bool
 
 // Run a given string of code input could be entire script or a single line
 func run(script string) {
-	var lexer Lexer = NewLexScanner(script)
-	toks := lexer.ScanTokens()
-	fmt.Println("Token Stream:")
+	lexer := NewLexScanner(script)
+	parser := NewParser(lexer)
+	tokens := lexer.ScanTokens()
+	fmt.Println("Token Stream:", parser)
 	// For now, just print each token
-	for index, tok := range toks {
+	for index, tok := range tokens {
 		fmt.Printf("%v: %v\n", index, tok)
 	}
 }
@@ -43,11 +44,11 @@ func report(line int, where, msg string) {
 
 // Read a given lox file at 'path' into a string and execute it
 func runFile(path string) {
-	fcontents, err := ioutil.ReadFile(path)
+	contents, err := ioutil.ReadFile(path)
 	if err != nil {
 		fmt.Printf("Can't open file at [%v].\n", path)
 	}
-	fstring := string(fcontents)
+	fstring := string(contents)
 	// execute the resulting string
 	run(fstring)
 	// did we find an error along the way
