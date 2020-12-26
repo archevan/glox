@@ -23,17 +23,20 @@ var hasError bool
 func run(script string) {
 	lexer := NewLexScanner(script)
 	parser := NewParser(lexer)
-	tokens := lexer.ScanTokens()
-	fmt.Println("Token Stream:", parser)
-	// For now, just print each token
-	for index, tok := range tokens {
-		fmt.Printf("%v: %v\n", index, tok)
+	printer := &ASTPrinter{}
+	if hasError {
+		return
 	}
+	fmt.Println(printer.Print(parser.Parse()))
 }
 
-// report an error on a line number 'line'
-func error(line int, msg string) {
-	report(line, "", msg)
+// errorTok prints out the contents and location of the token that caused the parser to panic
+func errorTok(tok Token, msg string) {
+	if tok.toktype == EOF {
+		report(tok.line, "at end", msg)
+	} else {
+		report(tok.line, "at '"+tok.lexeme+"'", msg)
+	}
 }
 
 // Report an error at a given line number

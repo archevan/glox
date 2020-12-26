@@ -1,6 +1,9 @@
 package main
 
-import "strconv"
+import (
+	"fmt"
+	"strconv"
+)
 
 // A Lexer is an interface that can be scanned into a slice of tokens
 type Lexer interface {
@@ -147,7 +150,7 @@ func (l *LexScanner) scanToken() {
 		} else if isAlphaNumeric(c) {
 			l.identifier()
 		} else {
-			error(l.line, "Unexpected character.")
+			fmt.Println(l.line, "Unexpected character.")
 		}
 	}
 }
@@ -189,14 +192,14 @@ func (l *LexScanner) number() {
 	}
 	f, err := strconv.ParseFloat(l.source[l.start:l.current], 64)
 	if err != nil {
-		error(l.line, "Error reading floating point value")
+		fmt.Println(l.line, "Error reading floating point value")
 	}
 	l.addToken(Number, f)
 }
 
 // isADigit
 func isADigit(c byte) bool {
-	return (c >= '0' && c <= '9')
+	return c >= '0' && c <= '9'
 }
 
 // string() scans a string form the input stream input a token
@@ -210,7 +213,7 @@ func (l *LexScanner) string() {
 		l.advance()
 	}
 	if l.isAtEnd() {
-		error(l.line, "Unterminated String.")
+		fmt.Println(l.line, "Unterminated String.")
 	}
 	l.advance()
 	// trim quotes + create token

@@ -11,7 +11,7 @@ type ASTPrinter struct {
 	str string
 }
 
-// print passes the ASTPrinter visitor to an Expr
+// Print passes the ASTPrinter visitor to an Expr
 func (a *ASTPrinter) Print(exp Expr) string {
 	exp.accept(a)
 	return a.String()

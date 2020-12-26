@@ -1,6 +1,6 @@
 package main
 
-import "os"
+import "errors"
 
 /*
 The simple expression grammar for Lox is as follows (left-factored & unambiguous):
@@ -16,6 +16,7 @@ primary        → NUMBER | STRING | "true" | "false" | "nil"
 */
 
 // Parser is a recursive descent parser
+// Error handling is implemented using a "synchronization" technique
 type Parser struct {
 	inputTokens []*Token
 	current     int
@@ -27,110 +28,206 @@ func NewParser(l Lexer) Parser {
 	return p
 }
 
-func (p *Parser) expression() Expr {
-	return p.equality()
+// Parse parses and returns a syntax tree for the given token stream
+func (p *Parser) Parse() Expr {
+	exp, err := p.expression()
+	if err != nil {
+		return nil
+	}
+	return exp
 }
 
-func (p *Parser) equality() Expr {
-	exp := p.comparison()
+func (p *Parser) expression() (Expr, error) {
+	eq, err := p.equality()
+	if err != nil {
+		return nil, err
+	}
+	return eq, nil
+}
+
+// equality() parses an equality structure from the input token stream
+func (p *Parser) equality() (Expr, error) {
+	exp, err := p.comparison()
+	if err != nil {
+		return nil, err
+	}
 	// left-associatively group equality expressions
 	for p.match(BangEqual, EqualEqual) {
 		op := p.previous()
-		right := p.comparison()
+		right, err := p.comparison()
+		if err != nil {
+			return nil, err
+		}
 		exp = &BinaryExpr{
 			left:  exp,
 			op:    *op,
 			right: right,
 		}
 	}
-	return exp
+	return exp, nil
 }
 
-func (p *Parser) comparison() Expr {
-	exp := p.term()
+// comparison() parses a "comparison" structure from the input stream
+func (p *Parser) comparison() (Expr, error) {
+	exp, err := p.term()
+	if err != nil {
+		return nil, err
+	}
 	for p.match(Greater, GreaterEqual, Less, LessEqual) {
 		op := p.previous()
-		right := p.term()
+		right, err := p.term()
+		if err != nil {
+			return nil, err
+		}
 		exp = &BinaryExpr{
 			left:  exp,
 			op:    *op,
 			right: right,
 		}
 	}
-	return exp
+	return exp, nil
 }
 
-func (p *Parser) term() Expr {
-	exp := p.factor()
+// term() parses a "term" structure from the input token stream
+func (p *Parser) term() (Expr, error) {
+	exp, err := p.factor()
+	if err != nil {
+		// pass the buck
+		return nil, err
+	}
 	for p.match(Plus, Minus) {
 		op := p.previous()
-		right := p.factor()
+		right, err := p.factor()
+		if err != nil {
+			return nil, err
+		}
 		exp = &BinaryExpr{
 			left:  exp,
 			op:    *op,
 			right: right,
 		}
 	}
-	return exp
+	return exp, nil
 }
 
-func (p *Parser) factor() Expr {
-	exp := p.unary()
+// factor() parses a "factor" structure from the input token stream
+func (p *Parser) factor() (Expr, error) {
+	exp, err := p.unary()
+	if err != nil {
+		return nil, err
+	}
 	for p.match(Star, Slash) {
 		op := p.previous()
-		right := p.unary()
+		right, err := p.unary()
+		if err != nil {
+			return nil, err
+		}
 		exp = &BinaryExpr{
 			left:  exp,
 			op:    *op,
 			right: right,
 		}
 	}
-	return exp
+	return exp, nil
 }
 
-func (p *Parser) unary() Expr {
+// unary() parses a unary op
+func (p *Parser) unary() (Expr, error) {
 	if p.match(Bang, Minus) {
 		op := p.previous()
-		right := p.unary()
+		right, err := p.unary()
+		if err != nil {
+			return nil, err
+		}
 		return &Unary{
 			op:    *op,
 			right: right,
-		}
+		}, nil
 	}
-	return p.primary()
+	exp, err := p.primary()
+	if err != nil {
+		// pass the buck
+		return nil, err
+	}
+	return exp, nil
 }
 
-func (p *Parser) primary() Expr {
+func (p *Parser) primary() (Expr, error) {
 	// match a number of different types of literals
 	switch {
 	case p.match(FalseTok):
-		return &Literal{val: false}
+		return &Literal{val: false}, nil
 	case p.match(TrueTok):
-		return &Literal{val: true}
+		return &Literal{val: true}, nil
 	case p.match(NilTok):
-		return &Literal{val: nil}
+		return &Literal{val: nil}, nil
 	case p.match(Number, StringTok):
-		return &Literal{p.previous().literal}
+		return &Literal{p.previous().literal}, nil
 	}
 	// enforce matching parens
 	if p.match(LeftParen) {
-		exp := p.expression()
-		p.consume(RightParen, "Expect ')' after expression")
-		return &Grouping{exp: exp}
+		exp, err := p.expression()
+		if err != nil {
+			return nil, err
+		}
+		err = p.consume(RightParen, "Expect ')' after expression")
+		if err != nil {
+			// catch error thrown from consume
+			return nil, err
+		}
+		return &Grouping{exp: exp}, nil
 	}
-	// TODO: implement below
-	return &BinaryExpr{}
+	// current token can not be used to start an expression
+	return nil, getError(*p.Peek(), "Expected expression.")
 }
 
 // consume matches the given token type or panic
-func (p *Parser) consume(typ TokenType, fails string) {
+// the error return type is similar to Java's throw it seems
+func (p *Parser) consume(typ TokenType, fails string) error {
 	if p.check(typ) {
+		// expected char found, no error
 		p.advance()
-		return
+		return nil
 	}
-	// error out and panic if we don't find a matching paren
-	error(p.inputTokens[p.current].line, fails)
-	os.Exit(64)
+	return getError(*p.Peek(), fails)
+}
+
+// synchronize discard tokens from the parsers' input token steam
+// until the beginning of a new statement is reached.
+func (p *Parser) synchronize() {
+	p.advance()
+	for !p.isAtEnd() {
+		if p.previous().toktype == Semicolon {
+			return
+		}
+
+		switch p.Peek().toktype {
+		case Class:
+			return
+		case Fun:
+			return
+		case VarTok:
+			return
+		case ForTok:
+			return
+		case IfTok:
+			return
+		case WhileTok:
+			return
+		case PrintTok:
+			return
+		case ReturnTok:
+			return
+		}
+		// otherwise, discard current token.
+		p.advance()
+	}
+}
+
+// getError generates an error
+func getError(tok Token, msg string) error {
+	errorTok(tok, msg) // record invalid token
+	return errors.New(msg)
 }
 
 // match consumes the next token in the input stream if and only if
