@@ -16,18 +16,25 @@ const (
 	version = "v0.0.1"
 )
 
-// Global flag is set on error
-var hasError bool
+// global var definitions
+var (
+	hasError, hasRuntimeError bool
+	interpreter               *Interpreter
+)
 
 // Run a given string of code input could be entire script or a single line
 func run(script string) {
 	lexer := NewLexScanner(script)
 	parser := NewParser(lexer)
-	printer := &ASTPrinter{}
+	// printer := &ASTPrinter{}
+	// start the interpreter if not running already
+	if interpreter == nil {
+		interpreter = new(Interpreter)
+	}
 	if hasError {
 		return
 	}
-	fmt.Println(printer.Print(parser.Parse()))
+	interpreter.Interpret(parser.Parse())
 }
 
 // errorTok prints out the contents and location of the token that caused the parser to panic
@@ -37,6 +44,12 @@ func errorTok(tok Token, msg string) {
 	} else {
 		report(tok.line, "at '"+tok.lexeme+"'", msg)
 	}
+}
+
+// runtimeError reports an err that occurs at runtime
+func runtimeError(e RuntimeError) {
+	fmt.Printf("%s [line %d]\n", e.msg, e.tkn.line)
+	hasRuntimeError = true
 }
 
 // Report an error at a given line number
@@ -57,6 +70,9 @@ func runFile(path string) {
 	// did we find an error along the way
 	if hasError {
 		os.Exit(65)
+	}
+	if hasRuntimeError {
+		os.Exit(70)
 	}
 }
 
