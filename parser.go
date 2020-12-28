@@ -1,6 +1,9 @@
 package main
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 /*
 The simple expression grammar for Lox is as follows (left-factored & unambiguous):
@@ -43,6 +46,15 @@ func (p *Parser) expression() (Expr, error) {
 		return nil, err
 	}
 	return eq, nil
+}
+
+func test() {
+	var i int = 12
+	test1(i)
+}
+
+func test1(i interface{}) {
+	fmt.Println(i)
 }
 
 // equality() parses an equality structure from the input token stream
