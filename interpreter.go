@@ -24,17 +24,27 @@ func (r RuntimeError) Error() string {
 }
 
 // Interpret is the Interpreter type's public API that allows values to be interpreted
-func (in *Interpreter) Interpret(e Expr) {
-	val, err := in.evaluate(e)
-	if err != nil {
-		// detect any runtime errors
-		// TODO: convert to a type switch when different types of errors are added
-		if rtErr, ok := err.(RuntimeError); ok {
-			runtimeError(rtErr)
+func (in *Interpreter) Interpret(stmtList []Stmt) {
+	for _, stmt := range stmtList {
+		err := in.execute(stmt)
+		if err != nil {
+			// catch error type
+			switch errtyp := err.(type) {
+			case RuntimeError:
+				runtimeError(errtyp)
+				return
+			}
 		}
-	} else {
-		fmt.Println(in.stringify(val))
 	}
+}
+
+// execute() is the equivalent of evaluate() for statements
+func (in *Interpreter) execute(s Stmt) error {
+	s.accept(in)
+	if err, ok := in.resultVal.(error); ok {
+		return err
+	}
+	return nil
 }
 
 // convert an evaluated Lox value into a string
@@ -182,6 +192,18 @@ func (in *Interpreter) VisitGrouping(g *Grouping) {
 // VisitLiteral interprets any given Literal expression
 func (in *Interpreter) VisitLiteral(l *Literal) {
 	in.resultVal = l.val
+}
+
+// VisitExprStmt interprets an expression-statement
+func (in *Interpreter) VisitExprStmt(estmt *ExprStmt) {
+	in.evaluate(estmt.exp)
+}
+
+// VisitPrintStmt interprets an print statement
+func (in *Interpreter) VisitPrintStmt(pstmt *PrintStmt) {
+	in.evaluate(pstmt.exp)
+	// in.resultVal could be a runtime error.
+	fmt.Println(in.stringify(in.resultVal))
 }
 
 // isTruthy determines whether a given value will evalulate to true

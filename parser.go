@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 )
 
 /*
@@ -32,12 +31,62 @@ func NewParser(l Lexer) Parser {
 }
 
 // Parse parses and returns a syntax tree for the given token stream
-func (p *Parser) Parse() Expr {
-	exp, err := p.expression()
-	if err != nil {
-		return nil
+func (p *Parser) Parse() []Stmt {
+	stmtList := make([]Stmt, 0)
+	for !p.isAtEnd() {
+		stmt, err := p.statement()
+		if err != nil {
+			// TODO: synchronize tokens here if there's a parse error
+		}
+		stmtList = append(stmtList, stmt)
 	}
-	return exp
+	return stmtList
+}
+
+// statement() parses a sequence of tokens from the input stream that corresponds to a statement
+func (p *Parser) statement() (Stmt, error) {
+	if p.match(PrintTok) {
+		stmt, err := p.printStmt()
+		if err != nil {
+			return nil, err
+		}
+		return stmt, nil
+	}
+	estmt, expErr := p.exprStmt()
+	if expErr != nil {
+		return nil, expErr
+	}
+	return estmt, nil
+}
+
+// printStmt() extracts a statement of the form PRINT <expression> from the token stream
+func (p *Parser) printStmt() (Stmt, error) {
+	val, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+	semicolonMatchErr := p.consume(Semicolon, "Expect ';' after value")
+	if semicolonMatchErr != nil {
+		return nil, semicolonMatchErr
+	}
+	return PrintStmt{
+		exp: val,
+	}, nil
+}
+
+// exprStmt() extracts an expression-statement from the input token stream
+func (p *Parser) exprStmt() (Stmt, error) {
+	val, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+	semicolonMatchErr := p.consume(Semicolon, "Expect ';' after value")
+	if semicolonMatchErr != nil {
+		return nil, semicolonMatchErr
+	}
+	return ExprStmt{
+		exp: val,
+	}, nil
 }
 
 func (p *Parser) expression() (Expr, error) {
@@ -46,15 +95,6 @@ func (p *Parser) expression() (Expr, error) {
 		return nil, err
 	}
 	return eq, nil
-}
-
-func test() {
-	var i int = 12
-	test1(i)
-}
-
-func test1(i interface{}) {
-	fmt.Println(i)
 }
 
 // equality() parses an equality structure from the input token stream

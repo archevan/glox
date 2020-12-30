@@ -16,7 +16,7 @@ def main():
         print("usage: .\python.exe generate_ast.py [output_directory]")
         sys.exit(64)
     output_dir = sys.argv[0]
-    output_file_name = "ast.go"
+    output_file_name = "ast_expr.go"
     current_path = os.path.dirname(__file__)  # get current directory
     output_path = os.path.relpath(
         output_dir, current_path) + "\\" + output_file_name
