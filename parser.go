@@ -5,6 +5,12 @@ import (
 )
 
 /*
+The simple statement grammar for Lox:
+program		   → declaration* EOF ;
+declaration	   → varDecl | statement ;
+varDecl		   → "var" IDENTIFIER ( "=" expression )? ";" ;
+statement	   → exprStmt | printStmt ;
+
 The simple expression grammar for Lox is as follows (left-factored & unambiguous):
 expression     → equality ;
 equality       → comparison ( ( "!=" | "==" ) comparison )* ;
@@ -14,6 +20,7 @@ factor         → unary ( ( "/" | "*" ) unary )* ;
 unary          → ( "!" | "-" ) unary
                | primary ;
 primary        → NUMBER | STRING | "true" | "false" | "nil"
+               | IDENTIFIER
                | "(" expression ")" ;
 */
 
@@ -30,17 +37,57 @@ func NewParser(l Lexer) Parser {
 	return p
 }
 
-// Parse parses and returns a syntax tree for the given token stream
+// Parse parses and returns a syntax tree (as a statement slice) for the given token stream
 func (p *Parser) Parse() []Stmt {
 	stmtList := make([]Stmt, 0)
 	for !p.isAtEnd() {
-		stmt, err := p.statement()
-		if err != nil {
-			// TODO: synchronize tokens here if there's a parse error
-		}
+		stmt := p.declaration()
 		stmtList = append(stmtList, stmt)
 	}
 	return stmtList
+}
+
+// declaration parses a declaration from the token struct.
+// ParseErrors are caught and handled here.
+func (p *Parser) declaration() Stmt {
+	if p.match(VarTok) {
+		stmt, err := p.varDeclaration()
+		if err != nil {
+			p.synchronize()
+			return nil
+		}
+		return stmt
+	}
+	stmt, err := p.statement()
+	if err != nil {
+		p.synchronize()
+		return nil
+	}
+	return stmt
+}
+
+// varDeclaration parses a variable declaration with an optional initializer expression
+func (p *Parser) varDeclaration() (Stmt, error) {
+	var init Expr = nil
+	err := p.consume(Identifier, "Expect variable name.")
+	if err != nil {
+		return nil, err
+	}
+	name := p.previous()
+	if p.match(Equal) {
+		init, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
+	}
+	err = p.consume(Semicolon, "Expect semicolon after variable declaration.")
+	if err != nil {
+		return nil, err
+	}
+	return &VarStmt{
+		name: name,
+		init: init,
+	}, nil
 }
 
 // statement() parses a sequence of tokens from the input stream that corresponds to a statement
@@ -69,7 +116,7 @@ func (p *Parser) printStmt() (Stmt, error) {
 	if semicolonMatchErr != nil {
 		return nil, semicolonMatchErr
 	}
-	return PrintStmt{
+	return &PrintStmt{
 		exp: val,
 	}, nil
 }
@@ -84,7 +131,7 @@ func (p *Parser) exprStmt() (Stmt, error) {
 	if semicolonMatchErr != nil {
 		return nil, semicolonMatchErr
 	}
-	return ExprStmt{
+	return &ExprStmt{
 		exp: val,
 	}, nil
 }
@@ -215,6 +262,10 @@ func (p *Parser) primary() (Expr, error) {
 		return &Literal{val: nil}, nil
 	case p.match(Number, StringTok):
 		return &Literal{p.previous().literal}, nil
+	}
+	// check for a variable usage
+	if p.match(Identifier) {
+		return &Variable{name: *p.previous()}, nil
 	}
 	// enforce matching parens
 	if p.match(LeftParen) {

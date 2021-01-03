@@ -11,6 +11,7 @@ import (
 type Interpreter struct {
 	// Lox return values are represented with an empty interface
 	resultVal interface{}
+	env       map[string]interface{}
 }
 
 // RuntimeError is a wrapper around the "offending" token and its associated error message
@@ -54,6 +55,7 @@ func (in *Interpreter) stringify(val interface{}) string {
 	}
 	if num, ok := val.(float64); ok {
 		str := fmt.Sprintf("%.1f", num)
+		// strip decimal from int floats
 		if strings.HasSuffix(str, ".0") {
 			str = str[:len(str)-2]
 		}
@@ -72,6 +74,35 @@ func (in *Interpreter) evaluate(e Expr) (interface{}, error) {
 		return nil, err
 	}
 	return in.resultVal, nil
+}
+
+// VisitVariable evaluates a variable expression to its corresponding value in the symbol table
+func (in *Interpreter) VisitVariable(v *Variable) {
+	val, ok := in.env[v.name.lexeme]
+	if !ok {
+		in.resultVal = RuntimeError{
+			tkn: v.name,
+			msg: "Can't evaluate variable init expression.",
+		}
+	}
+	in.resultVal = val
+}
+
+// VisitVarStmt inserts a variable binding into the current environment
+func (in *Interpreter) VisitVarStmt(v *VarStmt) {
+	var val interface{}
+	var err error
+	if v.init != nil {
+		val, err = in.evaluate(v.init)
+		if err != nil {
+			in.resultVal = RuntimeError{
+				tkn: *v.name,
+				msg: "Can't evaluate variable init expression.",
+			}
+		}
+	}
+	// add new binding to current environment
+	in.env[v.name.lexeme] = val
 }
 
 // VisitBinaryExpr interprets any given binary expression
@@ -196,14 +227,24 @@ func (in *Interpreter) VisitLiteral(l *Literal) {
 
 // VisitExprStmt interprets an expression-statement
 func (in *Interpreter) VisitExprStmt(estmt *ExprStmt) {
-	in.evaluate(estmt.exp)
+	val, err := in.evaluate(estmt.exp)
+	if err != nil {
+		in.resultVal = RuntimeError{
+			msg: "Can't eval expr statement",
+		}
+	}
+	in.resultVal = val
 }
 
 // VisitPrintStmt interprets an print statement
 func (in *Interpreter) VisitPrintStmt(pstmt *PrintStmt) {
-	in.evaluate(pstmt.exp)
-	// in.resultVal could be a runtime error.
-	fmt.Println(in.stringify(in.resultVal))
+	val, err := in.evaluate(pstmt.exp)
+	if err != nil {
+		in.resultVal = RuntimeError{
+			msg: "Can't eval print statement",
+		}
+	}
+	fmt.Println(in.stringify(val))
 }
 
 // isTruthy determines whether a given value will evalulate to true

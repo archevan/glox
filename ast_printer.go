@@ -11,6 +11,10 @@ type ASTPrinter struct {
 	str string
 }
 
+func (a *ASTPrinter) VisitVariable(c *Variable) {
+	panic("implement me")
+}
+
 // Print passes the ASTPrinter visitor to an Expr
 func (a *ASTPrinter) Print(exp Expr) string {
 	exp.accept(a)

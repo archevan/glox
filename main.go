@@ -27,9 +27,11 @@ func run(script string) {
 	lexer := NewLexScanner(script)
 	parser := NewParser(lexer)
 	// printer := &ASTPrinter{}
-	// start the interpreter if not running already
+	// start the interpreter (with a clean environment) if not running already
 	if interpreter == nil {
-		interpreter = new(Interpreter)
+		interpreter = &Interpreter{
+			env: make(map[string]interface{}),
+		}
 	}
 	if hasError {
 		return
