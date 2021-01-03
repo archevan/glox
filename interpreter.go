@@ -247,7 +247,7 @@ func (in *Interpreter) VisitPrintStmt(pstmt *PrintStmt) {
 	fmt.Println(in.stringify(val))
 }
 
-// isTruthy determines whether a given value will evalulate to true
+// isTruthy determines whether a given value will evaluate to true
 // nil and false both eval to false, everything else evaluates to true
 func (in *Interpreter) isTruthy(val interface{}) bool {
 	if val == nil {
