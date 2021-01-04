@@ -77,6 +77,24 @@ func (in *Interpreter) evaluate(e Expr) (interface{}, error) {
 }
 
 // VisitVariable evaluates a variable expression to its corresponding value in the symbol table
+func (in *Interpreter) VisitAssign(a *AssignExpr) {
+	val, err := in.evaluate(a.val)
+	if err != nil {
+		in.resultVal = err
+	}
+	if _, ok := in.env[a.name.lexeme]; ok {
+		in.env[a.name.lexeme] = val
+		in.resultVal = val
+	} else {
+		// undeclared variable
+		in.resultVal = RuntimeError{
+			tkn: a.name,
+			msg: "Undefined variable: " + a.name.lexeme,
+		}
+	}
+}
+
+// VisitVariable evaluates a variable expression to its corresponding value in the symbol table
 func (in *Interpreter) VisitVariable(v *Variable) {
 	val, ok := in.env[v.name.lexeme]
 	if !ok {

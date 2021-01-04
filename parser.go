@@ -137,9 +137,35 @@ func (p *Parser) exprStmt() (Stmt, error) {
 }
 
 func (p *Parser) expression() (Expr, error) {
+	asg, err := p.assignment()
+	if err != nil {
+		return nil, err
+	}
+	return asg, nil
+}
+
+// assignment generates a Assign token for an assignment expr
+// the return value is the expression that represents the assignment target
+func (p *Parser) assignment() (Expr, error) {
 	eq, err := p.equality()
 	if err != nil {
 		return nil, err
+	}
+	if p.match(Equal) {
+		var val Expr
+		eqtok := p.previous()
+		val, err = p.assignment()
+		if err != nil {
+			return nil, err
+		}
+		if varTok, ok := eq.(*Variable); ok {
+			return &AssignExpr{
+				name: varTok.name,
+				val:  val,
+			}, nil
+		} else {
+			errorTok(*eqtok, "Invalid assignment target")
+		}
 	}
 	return eq, nil
 }

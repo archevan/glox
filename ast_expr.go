@@ -8,10 +8,22 @@ type ExprVisitor interface {
 	VisitLiteral(c *Literal)
 	VisitUnary(c *Unary)
 	VisitVariable(c *Variable)
+	VisitAssign(a *AssignExpr)
 }
 
 type Expr interface {
 	accept(ExprVisitor)
+}
+
+// AssignExpr is a simple AST node
+type AssignExpr struct {
+	name Token
+	val  Expr
+}
+
+// accept method stub for AssignExpr
+func (a *AssignExpr) accept(v ExprVisitor) {
+	v.VisitAssign(a)
 }
 
 // BinaryExpr is a simple type of AST node

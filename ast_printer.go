@@ -11,8 +11,12 @@ type ASTPrinter struct {
 	str string
 }
 
+func (a2 *ASTPrinter) VisitAssign(a *AssignExpr) {
+	panic("implement me" + a.name.lexeme)
+}
+
 func (a *ASTPrinter) VisitVariable(c *Variable) {
-	panic("implement me")
+	panic("implement me" + c.name.lexeme)
 }
 
 // Print passes the ASTPrinter visitor to an Expr
