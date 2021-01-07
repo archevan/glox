@@ -11,7 +11,7 @@ import (
 type Interpreter struct {
 	// Lox return values are represented with an empty interface
 	resultVal interface{}
-	env       map[string]interface{}
+	env       *Environment
 }
 
 // RuntimeError is a wrapper around the "offending" token and its associated error message
@@ -81,27 +81,22 @@ func (in *Interpreter) VisitAssign(a *AssignExpr) {
 	val, err := in.evaluate(a.val)
 	if err != nil {
 		in.resultVal = err
+		return
 	}
-	if _, ok := in.env[a.name.lexeme]; ok {
-		in.env[a.name.lexeme] = val
-		in.resultVal = val
+	err = in.env.Assign(a.name, val)
+	if err != nil {
+		in.resultVal = err
 	} else {
-		// undeclared variable
-		in.resultVal = RuntimeError{
-			tkn: a.name,
-			msg: "Undefined variable: " + a.name.lexeme,
-		}
+		in.resultVal = val
 	}
 }
 
 // VisitVariable evaluates a variable expression to its corresponding value in the symbol table
 func (in *Interpreter) VisitVariable(v *Variable) {
-	val, ok := in.env[v.name.lexeme]
-	if !ok {
-		in.resultVal = RuntimeError{
-			tkn: v.name,
-			msg: "Can't evaluate variable init expression.",
-		}
+	val, err := in.env.Get(v.name)
+	if err != nil {
+		in.resultVal = err
+		return
 	}
 	in.resultVal = val
 }
@@ -120,7 +115,7 @@ func (in *Interpreter) VisitVarStmt(v *VarStmt) {
 		}
 	}
 	// add new binding to current environment
-	in.env[v.name.lexeme] = val
+	in.env.Define(*v.name, val)
 }
 
 // VisitBinaryExpr interprets any given binary expression
