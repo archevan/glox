@@ -6,6 +6,17 @@ type StmtVisitor interface {
 	VisitPrintStmt(c *PrintStmt)
 	VisitExprStmt(c *ExprStmt)
 	VisitVarStmt(c *VarStmt)
+	VisitBlockStmt(b *BlockStmt)
+}
+
+// BlockStmt is a node that represents a list of statements
+type BlockStmt struct {
+	statements []Stmt
+}
+
+// accept method stub for BlockStmt
+func (b *BlockStmt) accept(v StmtVisitor) {
+	v.VisitBlockStmt(b)
 }
 
 type Stmt interface {

@@ -9,7 +9,8 @@ The simple statement grammar for Lox:
 program		   → declaration* EOF ;
 declaration	   → varDecl | statement ;
 varDecl		   → "var" IDENTIFIER ( "=" expression )? ";" ;
-statement	   → exprStmt | printStmt ;
+statement	   → exprStmt | printStmt | block;
+block          → "{" declaration* "}" ;
 
 The simple expression grammar for Lox is as follows (left-factored & unambiguous):
 expression     → equality ;
@@ -99,11 +100,31 @@ func (p *Parser) statement() (Stmt, error) {
 		}
 		return stmt, nil
 	}
+	if p.match(LeftBrace) {
+		block, err := p.block()
+		if err != nil {
+			return nil, err
+		}
+		return &BlockStmt{statements: block}, nil
+	}
 	estmt, expErr := p.exprStmt()
 	if expErr != nil {
 		return nil, expErr
 	}
 	return estmt, nil
+}
+
+// block() parses any number of statements inside of a lexical block from the token stream
+func (p *Parser) block() ([]Stmt, error) {
+	statements := make([]Stmt, 0)
+	for !p.check(RightBrace) && !p.isAtEnd() {
+		statements = append(statements, p.declaration())
+	}
+	err := p.consume(RightBrace, "Expect '}' after block")
+	if err != nil {
+		return nil, err
+	}
+	return statements, nil
 }
 
 // printStmt() extracts a statement of the form PRINT <expression> from the token stream

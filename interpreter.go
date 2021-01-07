@@ -101,6 +101,29 @@ func (in *Interpreter) VisitVariable(v *Variable) {
 	in.resultVal = val
 }
 
+// VisitBlockStmt evaluates the statements inside of a lexical block
+func (in *Interpreter) VisitBlockStmt(b *BlockStmt) {
+	// execute block statements in a new environment
+	in.executeBlock(b.statements, NewEnvironment(in.env))
+}
+
+// execute a given list of statements in the given environment
+func (in *Interpreter) executeBlock(stmts []Stmt, newEnv *Environment) {
+	// add new environment to scope chain
+	newEnv.enclosing = in.env
+	in.env = newEnv
+	for _, statement := range stmts {
+		err := in.execute(statement)
+		if err != nil {
+			in.resultVal = err
+			in.env = in.env.enclosing
+			return
+		}
+	}
+	// pop the current scope off of the "scope chain"
+	in.env = in.env.enclosing
+}
+
 // VisitVarStmt inserts a variable binding into the current environment
 func (in *Interpreter) VisitVarStmt(v *VarStmt) {
 	var val interface{}
