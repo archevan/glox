@@ -9,10 +9,22 @@ type ExprVisitor interface {
 	VisitUnary(c *Unary)
 	VisitVariable(c *Variable)
 	VisitAssign(a *AssignExpr)
+	VisitLogical(l *LogicalExpr)
 }
 
 type Expr interface {
 	accept(ExprVisitor)
+}
+
+// LogicalExpr is a type of binary expression node used to represent logical statements
+type LogicalExpr struct {
+	left, right Expr
+	op          Token
+}
+
+// accept method stub for LogicalExpr
+func (l *LogicalExpr) accept(v ExprVisitor) {
+	v.VisitLogical(l)
 }
 
 // AssignExpr is a simple AST node

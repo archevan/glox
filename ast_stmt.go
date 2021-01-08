@@ -7,6 +7,17 @@ type StmtVisitor interface {
 	VisitExprStmt(c *ExprStmt)
 	VisitVarStmt(c *VarStmt)
 	VisitBlockStmt(b *BlockStmt)
+	VisitIfStmt(i *IfStmt)
+}
+
+// IfStmt represents a branch with an optional else
+type IfStmt struct {
+	thenPart, elsePart Stmt
+	exp                Expr
+}
+
+func (i *IfStmt) accept(v StmtVisitor) {
+	v.VisitIfStmt(i)
 }
 
 // BlockStmt is a node that represents a list of statements

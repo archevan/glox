@@ -101,6 +101,59 @@ func (in *Interpreter) VisitVariable(v *Variable) {
 	in.resultVal = val
 }
 
+// VisitIfStmt interprets an if statement
+func (in *Interpreter) VisitIfStmt(i *IfStmt) {
+	condition, err := in.evaluate(i.exp)
+	if err != nil {
+		in.resultVal = err
+		return
+	}
+	if in.isTruthy(condition) {
+		if err = in.execute(i.thenPart); err != nil {
+			in.resultVal = err
+			return
+		}
+	} else if i.elsePart != nil {
+		// execute the else statement if it exists
+		if err = in.execute(i.elsePart); err != nil {
+			in.resultVal = err
+			return
+		}
+	}
+	in.resultVal = nil
+}
+
+// VisitLogical() interprets the expressions given as
+// arguments to a logical expression (short-circuiting if necessary)
+// a value with appropriate "truthy-ness" will be returned
+func (in *Interpreter) VisitLogical(l *LogicalExpr) {
+	left, err := in.evaluate(l.left)
+	if err != nil {
+		in.resultVal = err
+		return
+	}
+	// the following conditional block allows logical operators to "short circuit"
+	if l.op.toktype == OrTok {
+		// OR token with true left expr
+		if in.isTruthy(left) {
+			in.resultVal = left
+			return
+		}
+	} else {
+		// AND token with false left expr
+		if !in.isTruthy(left) {
+			in.resultVal = left
+			return
+		}
+	}
+	right, err := in.evaluate(l.right)
+	if err != nil {
+		in.resultVal = err
+		return
+	}
+	in.resultVal = right
+}
+
 // VisitBlockStmt evaluates the statements inside of a lexical block
 func (in *Interpreter) VisitBlockStmt(b *BlockStmt) {
 	// execute block statements in a new environment
@@ -109,7 +162,7 @@ func (in *Interpreter) VisitBlockStmt(b *BlockStmt) {
 
 // execute a given list of statements in the given environment
 func (in *Interpreter) executeBlock(stmts []Stmt, newEnv *Environment) {
-	// add new environment to scope chain
+	// "push" the given environment onto the top of the scope chain
 	newEnv.enclosing = in.env
 	in.env = newEnv
 	for _, statement := range stmts {
@@ -120,7 +173,7 @@ func (in *Interpreter) executeBlock(stmts []Stmt, newEnv *Environment) {
 			return
 		}
 	}
-	// pop the current scope off of the "scope chain"
+	// pop the innermost scope off of the "scope chain"
 	in.env = in.env.enclosing
 }
 

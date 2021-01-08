@@ -9,11 +9,16 @@ The simple statement grammar for Lox:
 program		   → declaration* EOF ;
 declaration	   → varDecl | statement ;
 varDecl		   → "var" IDENTIFIER ( "=" expression )? ";" ;
-statement	   → exprStmt | printStmt | block;
+statement	   → exprStmt | printStmt | ifstmt | block;
 block          → "{" declaration* "}" ;
+ifstmt         → "if" "(" expression ")" statement ("else" statement)? ;
 
 The simple expression grammar for Lox is as follows (left-factored & unambiguous):
-expression     → equality ;
+expression     → assignment ;
+assignment     → IDENTIFIER "=" assignment
+			   | logic_or;
+logic_of	   → logic_and ("or" logic_and)* ;
+logic_and	   → equality ("and" equality)* ;
 equality       → comparison ( ( "!=" | "==" ) comparison )* ;
 comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
 term           → factor ( ( "-" | "+" ) factor )* ;
@@ -93,6 +98,13 @@ func (p *Parser) varDeclaration() (Stmt, error) {
 
 // statement() parses a sequence of tokens from the input stream that corresponds to a statement
 func (p *Parser) statement() (Stmt, error) {
+	if p.match(IfTok) {
+		ifStmt, err := p.ifStatement()
+		if err != nil {
+			return nil, err
+		}
+		return ifStmt, nil
+	}
 	if p.match(PrintTok) {
 		stmt, err := p.printStmt()
 		if err != nil {
@@ -112,6 +124,39 @@ func (p *Parser) statement() (Stmt, error) {
 		return nil, expErr
 	}
 	return estmt, nil
+}
+
+// ifStatement() parses an if statement structure from the token stream
+// each call to ifStatement() parses an else structure which disambiguate the dangling else
+func (p *Parser) ifStatement() (Stmt, error) {
+	// parse if condition expression
+	err := p.consume(LeftParen, "Expect '(' after 'if'")
+	if err != nil {
+		return nil, err
+	}
+	condition, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+	err = p.consume(RightParen, "Expect ')' after if condition")
+	// parse 'then' part and pass along errors (if any)
+	thenPart, err := p.statement()
+	if err != nil {
+		return nil, err
+	}
+	// parse 'else' part (if exists) and pass along errors (if any)
+	var elsePart Stmt
+	if p.match(Else) {
+		elsePart, err = p.statement()
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &IfStmt{
+		thenPart: thenPart,
+		elsePart: elsePart,
+		exp:      condition,
+	}, nil
 }
 
 // block() parses any number of statements inside of a lexical block from the token stream
@@ -168,7 +213,7 @@ func (p *Parser) expression() (Expr, error) {
 // assignment generates a Assign token for an assignment expr
 // the return value is the expression that represents the assignment target
 func (p *Parser) assignment() (Expr, error) {
-	eq, err := p.equality()
+	orRes, err := p.or()
 	if err != nil {
 		return nil, err
 	}
@@ -179,13 +224,54 @@ func (p *Parser) assignment() (Expr, error) {
 		if err != nil {
 			return nil, err
 		}
-		if varTok, ok := eq.(*Variable); ok {
+		if varTok, ok := orRes.(*Variable); ok {
 			return &AssignExpr{
 				name: varTok.name,
 				val:  val,
 			}, nil
 		} else {
 			errorTok(*eqtok, "Invalid assignment target")
+		}
+	}
+	return orRes, nil
+}
+
+// or() parses any number of logical OR expressions
+func (p *Parser) or() (Expr, error) {
+	expr, err := p.and()
+	if err != nil {
+		return nil, err
+	}
+	for p.match(OrTok) {
+		op := p.previous()
+		right, err := p.and()
+		if err != nil {
+			return nil, err
+		}
+		expr = &LogicalExpr{
+			left:  expr,
+			right: right,
+			op:    *op,
+		}
+	}
+	return expr, nil
+}
+
+func (p *Parser) and() (Expr, error) {
+	eq, err := p.equality()
+	if err != nil {
+		return nil, err
+	}
+	for p.match(And) {
+		op := p.previous()
+		right, err := p.equality()
+		if err != nil {
+			return nil, err
+		}
+		eq = &LogicalExpr{
+			left:  eq,
+			right: right,
+			op:    *op,
 		}
 	}
 	return eq, nil

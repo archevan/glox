@@ -11,6 +11,10 @@ type ASTPrinter struct {
 	str string
 }
 
+func (a2 *ASTPrinter) VisitLogical(l *LogicalExpr) {
+	panic("implement me")
+}
+
 func (a2 *ASTPrinter) VisitAssign(a *AssignExpr) {
 	panic("implement me" + a.name.lexeme)
 }
