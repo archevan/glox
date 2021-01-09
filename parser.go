@@ -13,6 +13,7 @@ statement	   → exprStmt | printStmt | whilestmt | ifstmt | block;
 block          → "{" declaration* "}" ;
 ifstmt         → "if" "(" expression ")" statement ("else" statement)? ;
 whilestmt	   → "while" "(" expression ")" statement ;
+forstmt        → "for" "(" (varDecl | exprStmt | ";") expression? ";" expression?)" statement;
 
 The simple expression grammar for Lox is as follows (left-factored & unambiguous):
 expression     → assignment ;
@@ -100,6 +101,12 @@ func (p *Parser) varDeclaration() (Stmt, error) {
 // statement() parses a sequence of tokens from the input stream that corresponds to a statement
 func (p *Parser) statement() (Stmt, error) {
 	switch {
+	case p.match(ForTok):
+		fStmt, err := p.forStatement()
+		if err != nil {
+			return nil, err
+		}
+		return fStmt, nil
 	case p.match(IfTok):
 		ifStmt, err := p.ifStatement()
 		if err != nil {
@@ -131,6 +138,74 @@ func (p *Parser) statement() (Stmt, error) {
 		return nil, expErr
 	}
 	return estmt, nil
+}
+
+// forStatement() parses any valid for statement from the input token stream
+func (p *Parser) forStatement() (Stmt, error) {
+	err := p.consume(LeftParen, "Expect '(' after 'for'.")
+	if err != nil {
+		return nil, err
+	}
+	// consume the initializer
+	var init Stmt
+	if p.match(Semicolon) {
+		// initializer omitted. advance past a Semicolon token
+		init = nil
+	} else if p.match(VarTok) {
+		init, err = p.varDeclaration()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		init, err = p.exprStmt()
+		if err != nil {
+			return nil, err
+		}
+	}
+	// consume the condition expression (if it exists)
+	var condition Expr
+	if !p.check(Semicolon) {
+		condition, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
+	}
+	err = p.consume(Semicolon, "Expect ';' after loop condition.")
+	// consume the increment
+	var increment Expr
+	if !p.check(RightParen) {
+		increment, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
+	}
+	err = p.consume(RightParen, "Expect ')' after for clauses.")
+	if err != nil {
+		return nil, err
+	}
+	// consume loop body statement
+	body, err := p.statement()
+	if err != nil {
+		return nil, err
+	}
+	// convert for loop logic into an semantically equivalent while loop
+	if increment != nil {
+		// create a new block that contains the loop's body statement and the increment expression
+		body = &BlockStmt{[]Stmt{body, &ExprStmt{increment}}}
+	}
+	// an omitted condition expression is assumed to be true
+	if condition == nil {
+		condition = &Literal{true}
+	}
+	body = &WhileStmt{
+		condition: condition,
+		statement: body,
+	}
+	if init != nil {
+		// create a new block that contains the initializer statement followed by the loop body (with increment expression)
+		body = &BlockStmt{[]Stmt{init, body}}
+	}
+	return body, nil
 }
 
 // whileStatement() parses a simple while loop structure from the token stream
