@@ -91,6 +91,30 @@ func (in *Interpreter) VisitAssign(a *AssignExpr) {
 	}
 }
 
+// VisitWhileStmt executes a while statement in the input syntax tree
+// this is a thin wrapper around Go's for loop
+func (in *Interpreter) VisitWhileStmt(w *WhileStmt) {
+	condition, err := in.evaluate(w.condition)
+	if err != nil {
+		in.resultVal = err
+		return
+	}
+	for in.isTruthy(condition) {
+		err = in.execute(w.statement)
+		if err != nil {
+			in.resultVal = err
+			return
+		}
+		// check condition again
+		condition, err = in.evaluate(w.condition)
+		if err != nil {
+			in.resultVal = err
+			return
+		}
+	}
+	in.resultVal = nil
+}
+
 // VisitVariable evaluates a variable expression to its corresponding value in the symbol table
 func (in *Interpreter) VisitVariable(v *Variable) {
 	val, err := in.env.Get(v.name)

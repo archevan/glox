@@ -8,6 +8,7 @@ type StmtVisitor interface {
 	VisitVarStmt(c *VarStmt)
 	VisitBlockStmt(b *BlockStmt)
 	VisitIfStmt(i *IfStmt)
+	VisitWhileStmt(w *WhileStmt)
 }
 
 // IfStmt represents a branch with an optional else
@@ -16,8 +17,20 @@ type IfStmt struct {
 	exp                Expr
 }
 
+// accept method stub for an if statement
 func (i *IfStmt) accept(v StmtVisitor) {
 	v.VisitIfStmt(i)
+}
+
+// WhileStmt represents a simple loop structure in the AST
+type WhileStmt struct {
+	condition Expr
+	statement Stmt
+}
+
+// accept method stub for an if statement
+func (w *WhileStmt) accept(v StmtVisitor) {
+	v.VisitWhileStmt(w)
 }
 
 // BlockStmt is a node that represents a list of statements

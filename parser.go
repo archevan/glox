@@ -9,9 +9,10 @@ The simple statement grammar for Lox:
 program		   → declaration* EOF ;
 declaration	   → varDecl | statement ;
 varDecl		   → "var" IDENTIFIER ( "=" expression )? ";" ;
-statement	   → exprStmt | printStmt | ifstmt | block;
+statement	   → exprStmt | printStmt | whilestmt | ifstmt | block;
 block          → "{" declaration* "}" ;
 ifstmt         → "if" "(" expression ")" statement ("else" statement)? ;
+whilestmt	   → "while" "(" expression ")" statement ;
 
 The simple expression grammar for Lox is as follows (left-factored & unambiguous):
 expression     → assignment ;
@@ -98,32 +99,66 @@ func (p *Parser) varDeclaration() (Stmt, error) {
 
 // statement() parses a sequence of tokens from the input stream that corresponds to a statement
 func (p *Parser) statement() (Stmt, error) {
-	if p.match(IfTok) {
+	switch {
+	case p.match(IfTok):
 		ifStmt, err := p.ifStatement()
 		if err != nil {
 			return nil, err
 		}
 		return ifStmt, nil
-	}
-	if p.match(PrintTok) {
+	case p.match(PrintTok):
 		stmt, err := p.printStmt()
 		if err != nil {
 			return nil, err
 		}
 		return stmt, nil
-	}
-	if p.match(LeftBrace) {
+	case p.match(WhileTok):
+		wStmt, err := p.whileStatement()
+		if err != nil {
+			return nil, err
+		}
+		return wStmt, nil
+	case p.match(LeftBrace):
 		block, err := p.block()
 		if err != nil {
 			return nil, err
 		}
 		return &BlockStmt{statements: block}, nil
 	}
+	// otherwise: look for an expression statement
 	estmt, expErr := p.exprStmt()
 	if expErr != nil {
 		return nil, expErr
 	}
 	return estmt, nil
+}
+
+// whileStatement() parses a simple while loop structure from the token stream
+func (p *Parser) whileStatement() (Stmt, error) {
+	// check left paren
+	err := p.consume(LeftParen, "Expect '(' after 'while'.")
+	if err != nil {
+		return nil, err
+	}
+	// parse condition expression
+	expr, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+	// check right paren
+	err = p.consume(RightParen, "Expect ')' after while loop condition.")
+	if err != nil {
+		return nil, err
+	}
+	// parse body statement
+	body, err := p.statement()
+	if err != nil {
+		return nil, err
+	}
+	return &WhileStmt{
+		condition: expr,
+		statement: body,
+	}, nil
 }
 
 // ifStatement() parses an if statement structure from the token stream
