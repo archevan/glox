@@ -99,10 +99,10 @@ func (in *Interpreter) VisitCall(c *CallExpr) {
 			in.resultVal = err
 			return
 		}
-		evalArg = append(evalArgs, evalArg)
+		evalArgs = append(evalArgs, evalArg)
 	}
 	// callee MUST BE callable
-	function, ok := callee.(LoxCaller)
+	function, ok := callee.(LoxFunction)
 	if !ok {
 		// throw a RuntimeError
 		in.resultVal = &RuntimeError{
@@ -120,7 +120,15 @@ func (in *Interpreter) VisitCall(c *CallExpr) {
 		return
 	}
 	// call the given function without
-	in.resultVal = function.call(*in, evalArgs)
+	in.resultVal = function.call(in, evalArgs)
+}
+
+// VisitFunctionStmt creates a binding in the interpreter's current environment between the function's name
+// and its corresponding LoxFunction values when a variable declaration is encountered. This creates a "callable"
+// interface (LoxFunction) for the given FunctionStmt node that can be invoked using the call() method later in the tree-walk.
+func (in *Interpreter) VisitFunctionStmt(f *FunctionStmt) {
+	function := LoxFunction(*f)
+	in.env.Define(f.name.lexeme, function)
 }
 
 // VisitVariable evaluates a variable expression to its corresponding value in the symbol table
@@ -259,6 +267,7 @@ func (in *Interpreter) VisitVarStmt(v *VarStmt) {
 				tkn: *v.name,
 				msg: "Can't evaluate variable init expression.",
 			}
+			return
 		}
 	}
 	// add new binding to current environment
@@ -403,6 +412,7 @@ func (in *Interpreter) VisitPrintStmt(pstmt *PrintStmt) {
 		in.resultVal = RuntimeError{
 			msg: "Can't eval print statement",
 		}
+		return
 	}
 	fmt.Println(in.stringify(val))
 }

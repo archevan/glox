@@ -2,18 +2,22 @@ package main
 
 import (
 	"errors"
+	"fmt"
 )
 
 /*
 The simple statement grammar for Lox:
 program		   → declaration* EOF ;
-declaration	   → varDecl | statement ;
+declaration	   → funcDecl | varDecl | statement ;
 varDecl		   → "var" IDENTIFIER ( "=" expression )? ";" ;
+funDecl		   → "fun" function ;
+function	   → IDENTIFIER "(" parameters? ")" block ;
 statement	   → exprStmt | printStmt | whilestmt | ifstmt | block;
 block          → "{" declaration* "}" ;
 ifstmt         → "if" "(" expression ")" statement ("else" statement)? ;
 whilestmt	   → "while" "(" expression ")" statement ;
 forstmt        → "for" "(" (varDecl | exprStmt | ";") expression? ";" expression?)" statement;
+parameters     → IDENTIFIER ( "," IDENTIFIER )* ;
 
 The simple expression grammar for Lox is as follows (left-factored & unambiguous):
 expression     → assignment ;
@@ -60,6 +64,14 @@ func (p *Parser) Parse() []Stmt {
 // declaration parses a declaration from the token struct.
 // ParseErrors are caught and handled here.
 func (p *Parser) declaration() Stmt {
+	if p.match(Fun) {
+		fun, err := p.function("function")
+		if err != nil {
+			p.synchronize()
+			return nil
+		}
+		return fun
+	}
 	if p.match(VarTok) {
 		stmt, err := p.varDeclaration()
 		if err != nil {
@@ -74,6 +86,48 @@ func (p *Parser) declaration() Stmt {
 		return nil
 	}
 	return stmt
+}
+
+func (p *Parser) function(kind string) (Stmt, error) {
+	err := p.consume(Identifier, fmt.Sprintf("Expect %s name.", kind))
+	if err != nil {
+		return nil, err
+	}
+	// consume function name
+	name := p.previous()
+	err = p.consume(LeftParen, fmt.Sprintf("Expect '(' after %s name.", kind))
+	// consume parameters
+	params := make([]Token, 0)
+	if !p.check(RightParen) {
+		for ok := true; ok; ok = p.match(Comma) {
+			if len(params) >= 255 {
+				errorTok(*p.Peek(), "Can't have more than 255 parameters.")
+			}
+			err = p.consume(Identifier, "Expect parameter name.")
+			if err != nil {
+				return nil, err
+			}
+			params = append(params, *p.previous())
+		}
+	}
+	err = p.consume(RightParen, "Expect ')' after parameter list.")
+	if err != nil {
+		return nil, err
+	}
+	// parse body
+	err = p.consume(LeftBrace, fmt.Sprintf("Expect '{' before %s body.", kind))
+	if err != nil {
+		return nil, err
+	}
+	body, err := p.block()
+	if err != nil {
+		return nil, err
+	}
+	return &FunctionStmt{
+		name:   *name,
+		params: params,
+		body:   body,
+	}, nil
 }
 
 // varDeclaration parses a variable declaration with an optional initializer expression

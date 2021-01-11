@@ -9,6 +9,7 @@ type StmtVisitor interface {
 	VisitBlockStmt(b *BlockStmt)
 	VisitIfStmt(i *IfStmt)
 	VisitWhileStmt(w *WhileStmt)
+	VisitFunctionStmt(f *FunctionStmt)
 }
 
 // IfStmt represents a branch with an optional else
@@ -20,6 +21,18 @@ type IfStmt struct {
 // accept method stub for an if statement
 func (i *IfStmt) accept(v StmtVisitor) {
 	v.VisitIfStmt(i)
+}
+
+// FunctionStmt represents a function declaration in the AST
+type FunctionStmt struct {
+	name   Token
+	params []Token
+	body   []Stmt
+}
+
+// accept method stub for an if statement
+func (f *FunctionStmt) accept(v StmtVisitor) {
+	v.VisitFunctionStmt(f)
 }
 
 // WhileStmt represents a simple loop structure in the AST

@@ -11,6 +11,10 @@ type ASTPrinter struct {
 	str string
 }
 
+func (a2 *ASTPrinter) VisitCall(c *CallExpr) {
+	panic("implement me")
+}
+
 func (a2 *ASTPrinter) VisitLogical(l *LogicalExpr) {
 	panic("implement me")
 }
