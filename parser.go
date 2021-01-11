@@ -12,11 +12,12 @@ declaration	   → funcDecl | varDecl | statement ;
 varDecl		   → "var" IDENTIFIER ( "=" expression )? ";" ;
 funDecl		   → "fun" function ;
 function	   → IDENTIFIER "(" parameters? ")" block ;
-statement	   → exprStmt | printStmt | whilestmt | ifstmt | block;
+statement	   → exprStmt | returnStmt | printStmt | whilestmt | ifstmt | block;
 block          → "{" declaration* "}" ;
 ifstmt         → "if" "(" expression ")" statement ("else" statement)? ;
 whilestmt	   → "while" "(" expression ")" statement ;
 forstmt        → "for" "(" (varDecl | exprStmt | ";") expression? ";" expression?)" statement;
+returnStmt     → "return" expression? ";" ;
 parameters     → IDENTIFIER ( "," IDENTIFIER )* ;
 
 The simple expression grammar for Lox is as follows (left-factored & unambiguous):
@@ -175,6 +176,12 @@ func (p *Parser) statement() (Stmt, error) {
 			return nil, err
 		}
 		return stmt, nil
+	case p.match(ReturnTok):
+		rStmt, err := p.returnStatement()
+		if err != nil {
+			return nil, err
+		}
+		return rStmt, nil
 	case p.match(WhileTok):
 		wStmt, err := p.whileStatement()
 		if err != nil {
@@ -194,6 +201,29 @@ func (p *Parser) statement() (Stmt, error) {
 		return nil, expErr
 	}
 	return estmt, nil
+}
+
+// returnStatement() parses a return statement from the input token stream
+func (p *Parser) returnStatement() (Stmt, error) {
+	keyword := p.previous()
+	// parse optional return expression
+	// default return val is nil if unspecified
+	var val Expr
+	var err error
+	if !p.check(Semicolon) {
+		val, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
+	}
+	err = p.consume(Semicolon, "Expect ';' after 'return'")
+	if err != nil {
+		return nil, err
+	}
+	return &ReturnStmt{
+		keyword: *keyword,
+		val:     val,
+	}, nil
 }
 
 // forStatement() parses any valid for statement from the input token stream

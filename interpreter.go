@@ -20,6 +20,20 @@ type RuntimeError struct {
 	msg string
 }
 
+func (r RuntimeError) Error() string {
+	return r.msg
+}
+
+// ReturnError is a special value that signals the execution of a return statement
+// ReturnError implements the error interface to emulate an exception
+type ReturnError struct {
+	val interface{}
+}
+
+func (r ReturnError) Error() string {
+	return "<return error stub -- IF YOU SEE THIS SOMETHING WENT VERY WRONG>"
+}
+
 // NewInterpreter returns a properly initialized interpreter structure
 func NewInterpreter() *Interpreter {
 	newEnv := NewEnvironment(nil)
@@ -82,6 +96,19 @@ func (in *Interpreter) evaluate(e Expr) (interface{}, error) {
 		return nil, err
 	}
 	return in.resultVal, nil
+}
+
+func (in *Interpreter) VisitReturnStmt(r *ReturnStmt) {
+	var val interface{}
+	var err error
+	if r.val != nil {
+		val, err = in.evaluate(r.val)
+		if err != nil {
+			in.resultVal = err
+			return
+		}
+	}
+	in.resultVal = &ReturnError{val}
 }
 
 // VisitCall executes a call structure in the input AST

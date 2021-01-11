@@ -26,7 +26,3 @@ func (g *GlobalFunctionClock) String() string {
 func (g *GlobalFunctionClock) call(in *Interpreter, args []interface{}) interface{} {
 	return time.Now().Unix()
 }
-
-func (r RuntimeError) Error() string {
-	return r.msg
-}

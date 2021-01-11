@@ -14,7 +14,10 @@ func (l *LoxFunction) call(in *Interpreter, args []interface{}) interface{} {
 	}
 	// execute function body inside newly-created environment
 	in.executeBlock(l.body, env)
-	// TODO: implement return values from function calls
+	if returnVal, ok := in.resultVal.(*ReturnError); ok {
+		return returnVal.val
+	}
+	// no return statement was encountered while executing function body, return val is assumed nil
 	return nil
 }
 

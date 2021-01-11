@@ -10,6 +10,7 @@ type StmtVisitor interface {
 	VisitIfStmt(i *IfStmt)
 	VisitWhileStmt(w *WhileStmt)
 	VisitFunctionStmt(f *FunctionStmt)
+	VisitReturnStmt(r *ReturnStmt)
 }
 
 // IfStmt represents a branch with an optional else
@@ -21,6 +22,17 @@ type IfStmt struct {
 // accept method stub for an if statement
 func (i *IfStmt) accept(v StmtVisitor) {
 	v.VisitIfStmt(i)
+}
+
+// ReturnStmt represents a return statement in the AST
+type ReturnStmt struct {
+	keyword Token
+	val     Expr
+}
+
+// accept method stub for an return statement
+func (r *ReturnStmt) accept(v StmtVisitor) {
+	v.VisitReturnStmt(r)
 }
 
 // FunctionStmt represents a function declaration in the AST
