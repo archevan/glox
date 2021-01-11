@@ -29,9 +29,7 @@ func run(script string) {
 	// Optional pretty printing class. printer := &ASTPrinter{}
 	// start the interpreter (with a clean environment) if not running already
 	if interpreter == nil {
-		interpreter = &Interpreter{
-			env: NewEnvironment(nil),
-		}
+		interpreter = NewInterpreter()
 	}
 	if hasError {
 		return

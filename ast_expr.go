@@ -10,10 +10,23 @@ type ExprVisitor interface {
 	VisitVariable(c *Variable)
 	VisitAssign(a *AssignExpr)
 	VisitLogical(l *LogicalExpr)
+	VisitCall(c *CallExpr)
 }
 
 type Expr interface {
 	accept(ExprVisitor)
+}
+
+// CallExpr is an AST node that represents a function call in the tree
+type CallExpr struct {
+	callee    Expr
+	paren     Token
+	arguments []Expr
+}
+
+// accept stub for function calls
+func (c *CallExpr) accept(v ExprVisitor) {
+	v.VisitCall(c)
 }
 
 // LogicalExpr is a type of binary expression node used to represent logical statements

@@ -26,7 +26,9 @@ comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
 term           → factor ( ( "-" | "+" ) factor )* ;
 factor         → unary ( ( "/" | "*" ) unary )* ;
 unary          → ( "!" | "-" ) unary
-               | primary ;
+               | call ;
+call           → primary ( "(" arguments? ")" )* ;
+arguments	   → expression ( "," expression )* ;
 primary        → NUMBER | STRING | "true" | "false" | "nil"
                | IDENTIFIER
                | "(" expression ")" ;
@@ -486,12 +488,62 @@ func (p *Parser) unary() (Expr, error) {
 			right: right,
 		}, nil
 	}
-	exp, err := p.primary()
+	call, err := p.call()
 	if err != nil {
 		// pass the buck
 		return nil, err
 	}
+	return call, nil
+}
+
+// parse a function call expression ( or a primary )
+func (p *Parser) call() (Expr, error) {
+	exp, err := p.primary()
+	if err != nil {
+		return nil, err
+	}
+	// consume any function calls + arguments
+	for {
+		if p.match(LeftParen) {
+			exp, err = p.finishCall(exp)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			break
+		}
+	}
 	return exp, nil
+}
+
+// finishCall collects any arguments to a function call and returns the
+// appropriate CallExpr struct
+func (p *Parser) finishCall(callee Expr) (Expr, error) {
+	args := make([]Expr, 0)
+	// consume any arguments given
+	if !p.check(RightParen) {
+		// equivalent to a do-while loop in C
+		for ok := true; ok; ok = p.match(Comma) {
+			if len(args) >= 255 {
+				// report an error here ... BUT don't panic (no need to synchronize)
+				errorTok(*p.Peek(), "Can't have more than 255 arguments.")
+			}
+			exp, err := p.expression()
+			if err != nil {
+				return nil, err
+			}
+			args = append(args, exp)
+		}
+	}
+	err := p.consume(RightParen, "Expect ')' after function call arguments.")
+	if err != nil {
+		return nil, err
+	}
+	return &CallExpr{
+		callee:    callee,
+		paren:     *p.previous(),
+		arguments: args,
+	}, nil
 }
 
 func (p *Parser) primary() (Expr, error) {

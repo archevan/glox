@@ -16,8 +16,8 @@ func NewEnvironment(enclosing *Environment) *Environment {
 }
 
 // Define() adds a new entry to the given environment bindings
-func (e *Environment) Define(name Token, val interface{}) {
-	e.bindings[name.lexeme] = val
+func (e *Environment) Define(name string, val interface{}) {
+	e.bindings[name] = val
 }
 
 // Get() searches the scope chain for a given name and throws an error if it's not found
